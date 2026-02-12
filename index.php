@@ -6,6 +6,7 @@
 $logFilePath = getenv('LOG_FILE_PATH') ?: 'nginx.log';
 $outputFileName = getenv('OUTPUT_FILE_NAME') ?: 'output.csv';
 $fileSavePath = getenv('FILE_SAVE_PATH') ?: '/tmp/csvFolder';
+$sshKeyPath = getenv('SSH_KEY_PATH') ?: '/var/www/html/id_ssh';
 
 
 $gitSshUrl = getenv('GIT_SSH_URL');
@@ -267,7 +268,7 @@ if (!$dryRun) {
         echo "\n\n Repo URL isn't provided, changes won't be pushed to GIT\n";
         exit(0);
     }
-    echo "\n\n Initializing Git repository...";
+    echo "\n\n Initializing Git repository...\n";
     $hasChanges = false;
     if (!is_dir('.git')) {
         exec('git init');
@@ -276,7 +277,7 @@ if (!$dryRun) {
         exec('git remote set-url origin ' . $gitSshUrl);
         $hasChanges = true;
     }
-    $checkCommand = "GIT_SSH_COMMAND='ssh -i /var/www/html/id_ssh -o StrictHostKeyChecking=no' git ls-remote $gitSshUrl HEAD 2>&1";
+    $checkCommand = "GIT_SSH_COMMAND='ssh -i $sshKeyPath -o StrictHostKeyChecking=no' git ls-remote $gitSshUrl HEAD 2>&1";
     exec($checkCommand, $output, $resultCode);
     if ($resultCode !== 0) {
         echo "\n Git Connection Failed! CSV is not pushed to GIT";
@@ -287,7 +288,7 @@ if (!$dryRun) {
     echo "\n Initializing Git configs...\n";
     exec('git config user.email ' . $gitEmail);
     exec('git config user.name "' . $gitUser .'"');
-    exec('git config core.sshCommand "ssh -i /var/www/html/id_ssh -o StrictHostKeyChecking=no"');
+    exec("git config core.sshCommand 'ssh -i $sshKeyPath -o StrictHostKeyChecking=no'");
     exec('git fetch origin');
     if ($hasChanges) {
         exec('git stash -u');

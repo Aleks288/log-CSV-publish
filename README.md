@@ -34,7 +34,8 @@ apt-get install -y php7.4-cli php7.4-fpm
 The script requires a .env file to run.
 
 Example .env file
->LOG_FILE_PATH=nginx.log
+```
+LOG_FILE_PATH=/var/www/html/nginx.log
 OUTPUT_FILE_NAME=output.csv
 FILE_SAVE_PATH=/tmp/csvFolder
 GIT_SSH_URL=git@github.com:User/repo-name.git
@@ -42,7 +43,8 @@ GIT_USER=test
 GIT_EMAIL=service@test.com
 GIT_BRANCH=dev
 SSH_KEY_PATH=/var/www/html/id_rsa
- 
+```
+
 ⚠️ If GIT_SSH_URL is not provided, the script will not push changes to the repository.
 
 ---
@@ -60,11 +62,14 @@ php index.php \
 
 ## Docker execution
 ```bash
-docker run \
+docker run \                                    
   --env-file .env \
   -v ~/.ssh/id_rsa_git:/var/www/html/id_ssh:ro \
   my-image \
-  php index.php
+  --sort datetime=DESC bytes_sent=ASC \
+  --filter 'datetime>26/Apr/2021:21:20:22 +0000' 'request_id%45' \
+  --message 'Test message' \
+  --dry-run
 ```
 
 ---
@@ -203,4 +208,4 @@ To push changes:
 
 - Script stops execution if the parsed log file is empty
 - SSH credentials are validated before pushing to Git
-- Docker executiong is stateless unless volumes are mounted
+- Docker execution is stateless unless volumes are mounted
