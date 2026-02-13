@@ -25,6 +25,11 @@ This script parses Nginx access logs, applies filtering and sorting rules, expor
 apt-get install -y php7.4-cli php7.4-fpm
 ```
 - Git
+
+```bash
+apt-get install git
+```
+
 - Docker (can be used to run the script inside a container)
 
 ---
@@ -36,7 +41,7 @@ The script requires a .env file to run.
 Example .env file
 ```
 LOG_FILE_PATH=/var/www/html/nginx.log
-OUTPUT_FILE_NAME=output.csv
+OUTPUT_FILE_NAME=output
 FILE_SAVE_PATH=/tmp/csvFolder
 GIT_SSH_URL=git@github.com:User/repo-name.git
 GIT_USER=test
@@ -62,6 +67,8 @@ php index.php \
 
 ## Docker execution
 ```bash
+docker build -t my-image .
+
 docker run \                                    
   --env-file .env \
   -v ~/.ssh/id_rsa_git:/var/www/html/id_ssh:ro \
@@ -108,7 +115,7 @@ Example:
 
 - ``--dry-run``
 
-Runs the script without pushing changes to Git
+Runs the script without commiting and pushing changes to Git
 
 ---
 
@@ -119,7 +126,6 @@ Runs the script without pushing changes to Git
 ```bash
 /^(\S+)\s(.*?)\s(.*?)\s\[(.*?)\]\s\"(([A-Z]+)\s(\S+)\s(.*?))\"\s(\d{3})\s(\d+)\s\"(.*?)\"\s\"(.*?)\"\s(\d+)\s(\d+\.\d+)\s\[(.*?)\]\s\[(.*?)\]\s(\S+)\s(\d+)\s(\d+\.\d+)\s(\d{3})\s(.*)$/
 ```
-
 
 The regex extracts 17 fields. The following fields can be used for filtering and sorting:
 
@@ -145,10 +151,10 @@ The regex extracts 17 fields. The following fields can be used for filtering and
 
 # Output Behavior
 
--  If no records remain after filtering, the script stops execution
+- If no records remain after filtering, the script stops execution
 - Output CSV is saved to FILE_SAVE_PATH
-- If the file already exists, it will be overwritten
-
+- Output CSV has suffix in name as datetime (e.g. output_20260213_151026.csv)
+- If connection with GIT is not established, script execution is stopped
 
 ---
 
@@ -163,13 +169,17 @@ If the directory is not initialized:
 
 On subsequent runs:
 
+- Resets GIT configs (user, email, origin url, ssh key)
+
+- Checkouts branch
+
 - Pulls latest changes
 
-- Overwrites the CSV file
+- Generate the CSV file
 
-- Creates a new commit
+- Creates a new commit (if dry run is not active)
 
-- Pushes changes to the configured branch
+- Pushes changes to the configured branch (if dry run is not active)
 
 ### Docker note
 When running inside Docker, Git state is not preserved unless a volume is mounted.
@@ -179,8 +189,8 @@ If GIT user, email and branch are not specified in the .env file, the standard v
 
 - user 'test'
 - email 'service@test.com'
-- branch 'dev'
-
+- branch 'dev' 
+️
 ---
 
 # SSH Access
@@ -196,6 +206,7 @@ To push changes:
 
 # Example Workflow
 
+- Init Git repo with configs. Check connectivity
 - Parse Nginx logs
 - Apply filters and sorting
 - Export results to CSV
@@ -206,6 +217,6 @@ To push changes:
 
 # Notes
 
+- Script stops execution if connection to GIT is failed
 - Script stops execution if the parsed log file is empty
-- SSH credentials are validated before pushing to Git
 - Docker execution is stateless unless volumes are mounted

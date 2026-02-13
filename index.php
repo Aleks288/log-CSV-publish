@@ -4,9 +4,12 @@
  * Fetching ENV params
  */
 $logFilePath = getenv('LOG_FILE_PATH') ?: 'nginx.log';
-$outputFileName = getenv('OUTPUT_FILE_NAME') ?: 'output.csv';
+$outputFileName = getenv('OUTPUT_FILE_NAME') ?: 'output';
 $fileSavePath = getenv('FILE_SAVE_PATH') ?: '/tmp/csvFolder';
 $sshKeyPath = getenv('SSH_KEY_PATH') ?: '/var/www/html/id_ssh';
+
+$timestamp = date('Ymd_His');
+$outputFileName = $outputFileName . '_' . $timestamp . '.csv';
 
 
 $gitSshUrl = getenv('GIT_SSH_URL');
@@ -72,6 +75,35 @@ foreach ($argv as $arg) {
             $mode = null;
             break;
     }
+}
+
+if (!$dryRun) {
+    if (!$gitSshUrl) {
+        echo "\n\n Repo URL isn't provided, connection with GIT is not established. Execution is stopped\n";
+        exit(0);
+    }
+    echo "\n\n Initializing Git repository...\n";
+    if (!is_dir('.git')) {
+        exec('git init');
+        exec('git remote add origin ' . $gitSshUrl);
+    } else {
+        exec('git remote set-url origin ' . $gitSshUrl);
+    }
+    $checkConnection = "GIT_SSH_COMMAND='ssh -i $sshKeyPath -o StrictHostKeyChecking=no' git ls-remote $gitSshUrl HEAD 2>&1";
+    exec($checkConnection, $output, $resultCode);
+    if ($resultCode !== 0) {
+        echo "\n Git Connection Failed! Execution is stopped";
+        echo "\n Details: " . implode("\n", $output) . "\n";
+        exit(1);
+    }
+
+    echo "\n Initializing Git configs...\n";
+    exec("git config user.email $gitEmail");
+    exec("git config user.name '$gitUser'");
+    exec("git config core.sshCommand 'ssh -i $sshKeyPath -o StrictHostKeyChecking=no'");
+    exec('git fetch origin');
+    exec("git checkout $gitBranch || git checkout -b $gitBranch");
+    exec("git pull origin $gitBranch");
 }
 
 /**
@@ -247,15 +279,14 @@ if (!is_dir($fileSavePath)) {
 
 chdir($fileSavePath);
 
-echo "\n\n Writing to the CSV file";
+echo "\n\n Writing to the CSV file $outputFileName";
 $csv = fopen($outputFileName, 'w');
-
 
 /**
  * Writing to CSV
  */
 fputcsv($csv, ['IP', 'DateTime', 'HTTP Method', 'Endpoint', 'HTTP Version', 'Response Code', 'Bytes Sent', 'HTTP Referer', 'User Agent',
-'Request Length', 'Request Time', 'Upstream Addr', 'Upstream IP', 'Upstream Response Length', 'Upstream Response Time', 'Upstream Status', 'Request ID']);
+    'Request Length', 'Request Time', 'Upstream Addr', 'Upstream IP', 'Upstream Response Length', 'Upstream Response Time', 'Upstream Status', 'Request ID']);
 foreach ($data as $row) {
     fputcsv($csv, $row);
 }
@@ -264,49 +295,13 @@ fclose($csv);
 echo "\n\n CSV is done!";
 
 if (!$dryRun) {
-    if (!$gitSshUrl) {
-        echo "\n\n Repo URL isn't provided, changes won't be pushed to GIT\n";
-        exit(0);
-    }
-    echo "\n\n Initializing Git repository...\n";
-    $hasChanges = false;
-    if (!is_dir('.git')) {
-        exec('git init');
-        exec('git remote add origin ' . $gitSshUrl);
-    } else {
-        exec('git remote set-url origin ' . $gitSshUrl);
-        $hasChanges = true;
-    }
-    $checkCommand = "GIT_SSH_COMMAND='ssh -i $sshKeyPath -o StrictHostKeyChecking=no' git ls-remote $gitSshUrl HEAD 2>&1";
-    exec($checkCommand, $output, $resultCode);
-    if ($resultCode !== 0) {
-        echo "\n Git Connection Failed! CSV is not pushed to GIT";
-        echo "\n Details: " . implode("\n", $output) . "\n";
-        exit(1);
-    }
-
-    echo "\n Initializing Git configs...\n";
-    exec('git config user.email ' . $gitEmail);
-    exec('git config user.name "' . $gitUser .'"');
-    exec("git config core.sshCommand 'ssh -i $sshKeyPath -o StrictHostKeyChecking=no'");
-    exec('git fetch origin');
-    if ($hasChanges) {
-        exec('git stash -u');
-        exec("git checkout -f $gitBranch || git checkout -f -b $gitBranch origin/$gitBranch");
-        exec('git pull origin '  . $gitBranch);
-        exec('git checkout stash@{0} -- ' . $outputFileName);
-        exec('git stash clear');
-    } else {
-        exec("git checkout $gitBranch || git checkout -b $gitBranch origin/$gitBranch");
-        exec('git pull origin '  . $gitBranch);
-    }
-    echo "\n Commit changes";
+    echo "\n Commit changes\n";
     exec('git add ' . $outputFileName);
-    $message = $commitMessage . date("Y-m-d H:i:s");
-    exec('git commit -m "' . $message . '"');
+    $message = $commitMessage ?: "CSV file generated at - " . date('Y-m-d H:i:s');
+    exec("git commit -m $message");
 
-    echo "\n Pushing changes";
-    exec('git push origin ' . $gitBranch);
+    echo "\n Pushing changes\n";
+    exec("git push -u origin $gitBranch");
 
 //    echo "\n Removing work folder and CSV";
 //    exec('rm -rf ' . $fileSavePath);
