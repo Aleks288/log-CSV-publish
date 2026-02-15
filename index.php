@@ -3,25 +3,26 @@
 /**
  * Fetching ENV params
  */
-$logFilePath = getenv('LOG_FILE_PATH') ?: 'nginx.log';
-$outputFileName = getenv('OUTPUT_FILE_NAME') ?: 'output';
-$fileSavePath = getenv('FILE_SAVE_PATH') ?: '/tmp/csvFolder';
-$sshKeyPath = getenv('SSH_KEY_PATH') ?: '/var/www/html/id_ssh';
+$env = file_exists('.env') ? parse_ini_file('.env') : [];
+
+$logFilePath = getenv('LOG_FILE_PATH') ?: ($env["LOG_FILE_PATH"] ?? 'nginx.log');
+$outputFileName = getenv('OUTPUT_FILE_NAME') ?: ($env["OUTPUT_FILE_NAME"] ?? 'output');
+$fileSavePath = getenv('FILE_SAVE_PATH') ?: ($env["FILE_SAVE_PATH"] ?? '/tmp/csvFolder');
+$sshKeyPath = getenv('SSH_KEY_PATH') ?: ($env["SSH_KEY_PATH"] ?? '/var/www/html/id_ssh');
 
 $timestamp = date('Ymd_His');
 $outputFileName = $outputFileName . '_' . $timestamp . '.csv';
 
-
-$gitSshUrl = getenv('GIT_SSH_URL');
+$gitSshUrl = getenv('GIT_SSH_URL') ?: ($env["GIT_SSH_URL"] ?? '');
 $gitSshUrl = $gitSshUrl !== false ? escapeshellarg($gitSshUrl) : '';
 
-$gitUser = getenv('GIT_USER');
+$gitUser = getenv('GIT_USER') ?: ($env["GIT_USER"] ?? '');
 $gitUser = $gitUser !== false ? escapeshellarg($gitUser) : 'test';
 
-$gitEmail = getenv('GIT_EMAIL');
+$gitEmail = getenv('GIT_EMAIL') ?: ($env["GIT_EMAIL"] ?? '');
 $gitEmail = $gitEmail !== false ? escapeshellarg($gitEmail) : 'service@test.com';
 
-$gitBranch = getenv('GIT_BRANCH');
+$gitBranch = getenv('GIT_BRANCH') ?: ($env["GIT_BRANCH"] ?? '');
 $gitBranch = $gitBranch !== false ? escapeshellarg($gitBranch) : 'dev';
 
 

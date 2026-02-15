@@ -50,6 +50,15 @@ GIT_BRANCH=dev
 SSH_KEY_PATH=/var/www/html/id_rsa
 ```
 
+- LOG_FILE_PATH (required, default for Docker '/var/www/html/id_rsa') - path to the log file
+- GIT_SSH_URL (required, default for the Docker '/var/www/html/id_rsa') - ssh repo url
+- SSH_KEY_PATH (required) - path to the ssh key for repo connection. For docker usage should be also mounted as volume
+- OUTPUT_FILE_NAME (optional, default 'output') - name of the output file. Should be without .csv extension
+- FILE_SAVE_PATH (optional, default '/tmp/csvFolder') - path where output file will be saved
+- GIT_USER (optional, default 'test') - git user
+- GIT_EMAIL (optional, default 'service@test.com')
+- GIT_BRANCH (optional, default 'dev')
+
 ⚠️ If GIT_SSH_URL is not provided, the script will not push changes to the repository.
 
 ---
@@ -69,9 +78,10 @@ php index.php \
 ```bash
 docker build -t my-image .
 
-docker run \                                    
+docker run \
   --env-file .env \
   -v ~/.ssh/id_rsa_git:/var/www/html/id_ssh:ro \
+  -v /var/log/nginx/nginx.log:/var/www/html/nginx.log:ro \
   my-image \
   --sort datetime=DESC bytes_sent=ASC \
   --filter 'datetime>26/Apr/2021:21:20:22 +0000' 'request_id%45' \
